@@ -9,8 +9,8 @@ from collections import namedtuple, defaultdict
 
 Entry = namedtuple('Entry', 'entity component')
 
-# Mapping component class -> list of entries
-_registry = defaultdict(list)
+# _registry[component_class][entity] = component_instance
+_registry = defaultdict(dict)
 
 
 def add(entity, *components):
@@ -18,36 +18,32 @@ def add(entity, *components):
 
     for component in components:
         klass = component.__class__
-        entry = Entry(entity, component)
-        _registry[klass].append(entry)
+        _registry[klass][entity] = component
 
 
 def by_class(klass):
     '''Generator that yields all the components of a given class'''
     try:
-        for entry in _registry[klass]:
-            yield entry
+        for entity in _registry[klass]:
+            yield Entry(entity, _registry[klass][entity])
     except KeyError:
         pass
+
 
 def by_entity(entity):
     '''Generator that yields all the components of a given entity'''
-    for klass, entries in _registry.items():
-        for entry in entries:
-            if entry.entity == entity:
-                yield entry
+    for klass in _registry:
+        if entity in _registry[klass]:
+            return Entry(entity, _registry[klass][entity])
+
 
 def by_entity_and_class(entity, klass):
-    '''All the components of a given entity mathing the component class'''
-    try:
-        for entry in _registry[klass]:
-            if entry.entity == entity:
-                yield entry
-    except KeyError:
-        pass
+    '''Component of a given entity mathing the component class, or raises KeyError'''
+    return _registry[klass][entity]
+
 
 def single_match(*klasses):
-    '''Yields lists of components from entities that have all the specified component classes'''
+    '''Yields [entity, components...] from all matching entities'''
 
     if len(klasses) < 1:
         return
@@ -60,12 +56,11 @@ def single_match(*klasses):
     for entity, component in entries:
         retlist = [entity, component]
         for klass in klasses[1:]:
-            for _, component in by_entity_and_class(entity, klass):
-                retlist.append(component)
-                break
-            else:
-                # klass not found, break outside
+            try:
+                retlist.append(by_entity_and_class(entity, klass))
+            except KeyError:
                 break
         else:
+            # All found
             yield retlist
 

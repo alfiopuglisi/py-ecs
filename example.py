@@ -72,7 +72,7 @@ def run():
                          pygame.K_UP:   (0, -0.1),
                          pygame.K_DOWN: (0, 0.1)}[event.key]
 
-                    _, speed = list(components.by_entity_and_class(0, Speed2D))[0]
+                    speed = components.by_entity_and_class(0, Speed2D)
                     speed.x += v[0]
                     speed.y += v[1]
                 except KeyError:
